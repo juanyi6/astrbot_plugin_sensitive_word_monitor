@@ -48,7 +48,7 @@ class SensitiveWordMonitor(Star):
         self.enable_local_check = config.get("enable_local_check", True)
         self.debug_mode = config.get("debug_mode", False)
 
-        # 自定义违禁词
+        # 自定义敏感词
         self.custom_forbidden_words = set(config.get("custom_forbidden_words", []))
         self.local_check_patterns = self._compile_local_patterns()
 
@@ -85,10 +85,10 @@ class SensitiveWordMonitor(Star):
         self.init_database()
 
         logger.info("=" * 60)
-        logger.info(f"敏感词监控插件 v0.0.1 已加载")
+        logger.info(f"敏感词撤回插件 v0.0.1 已加载")
         logger.info(f"监控群聊：{len(self.group_whitelist)}个")
         logger.info(f"管理员：{len(self.admin_qq_list)}个")
-        logger.info(f"自定义违禁词：{len(self.custom_forbidden_words)}个")
+        logger.info(f"自定义敏感词：{len(self.custom_forbidden_words)}个")
         logger.info(f"自定义白名单词：{len(self.custom_white_words)}个")
         logger.info(
             f"禁言规则：{self.first_ban_duration}s/{self.second_ban_duration}s/{self.third_ban_duration}s"
@@ -97,7 +97,7 @@ class SensitiveWordMonitor(Star):
         logger.info("=" * 60)
 
     def _compile_local_patterns(self) -> List[re.Pattern]:
-        """编译本地违禁词正则表达式"""
+        """编译本地敏感词正则表达式"""
         patterns = []
         for word in self.custom_forbidden_words:
             if word:
@@ -105,7 +105,7 @@ class SensitiveWordMonitor(Star):
                     pattern = re.compile(re.escape(word), re.IGNORECASE)
                     patterns.append(pattern)
                 except Exception as e:
-                    logger.error(f"编译违禁词正则失败 {word}: {e}")
+                    logger.error(f"编译敏感词正则失败 {word}: {e}")
         return patterns
 
     def _compile_white_word_patterns(self) -> List[re.Pattern]:
@@ -121,7 +121,7 @@ class SensitiveWordMonitor(Star):
         return patterns
 
     def local_check(self, text: str) -> Tuple[bool, List[str]]:
-        """本地违禁词检测"""
+        """本地敏感词检测"""
         if not self.enable_local_check or not self.local_check_patterns:
             return False, []
 
@@ -522,7 +522,7 @@ class SensitiveWordMonitor(Star):
                     logger.debug(f"用户{user_id}在冷却时间内，忽略")
                 return
 
-            # 本地违禁词检测
+            # 本地敏感词检测
             local_hit, local_words = self.local_check(message_text)
             if local_hit and local_words:
                 logger.info(f"本地检测到敏感词：{local_words}")
@@ -706,7 +706,7 @@ class SensitiveWordMonitor(Star):
                 self.update_statistics(group_id, user_id, [], False)
 
         except Exception as e:
-            logger.error(f"敏感词监控处理异常：{e}")
+            logger.error(f"敏感词撤回处理异常：{e}")
             if self.debug_mode:
                 import traceback
 
@@ -999,18 +999,18 @@ class SensitiveWordMonitor(Star):
             logger.error(f"敏感词测试失败：{e}")
             yield event.plain_result("测试失败")
 
-    @filter.command("添加违禁词")
+    @filter.command("添加敏感词")
     async def add_forbidden_word(self, event: AiocqhttpMessageEvent, word: str):
-        """添加自定义违禁词"""
+        """添加自定义敏感词"""
         try:
             user_id = str(event.message_obj.sender.user_id)
 
             if not any(admin_umo.endswith(user_id) for admin_umo in self.admin_qq_list):
-                yield event.plain_result("仅管理员可添加违禁词")
+                yield event.plain_result("仅管理员可添加敏感词")
                 return
 
             if not word or not word.strip():
-                yield event.plain_result("违禁词不能为空")
+                yield event.plain_result("敏感词不能为空")
                 return
 
             # 更新配置
@@ -1025,23 +1025,23 @@ class SensitiveWordMonitor(Star):
                 self.local_check_patterns = self._compile_local_patterns()
 
                 yield event.plain_result(
-                    f"✅ 已添加违禁词：{word}\n当前违禁词数量：{len(words_config)}"
+                    f"✅ 已添加敏感词：{word}\n当前敏感词数量：{len(words_config)}"
                 )
             else:
-                yield event.plain_result(f"⚠️ 违禁词 '{word}' 已存在")
+                yield event.plain_result(f"⚠️ 敏感词 '{word}' 已存在")
 
         except Exception as e:
-            logger.error(f"添加违禁词失败：{e}")
+            logger.error(f"添加敏感词失败：{e}")
             yield event.plain_result(f"❌ 添加失败：{str(e)}")
 
-    @filter.command("删除违禁词")
+    @filter.command("删除敏感词")
     async def remove_forbidden_word(self, event: AiocqhttpMessageEvent, word: str):
-        """删除自定义违禁词"""
+        """删除自定义敏感词"""
         try:
             user_id = str(event.message_obj.sender.user_id)
 
             if not any(admin_umo.endswith(user_id) for admin_umo in self.admin_qq_list):
-                yield event.plain_result("仅管理员可删除违禁词")
+                yield event.plain_result("仅管理员可删除敏感词")
                 return
 
             words_config = self.config.get("custom_forbidden_words", [])
@@ -1056,26 +1056,26 @@ class SensitiveWordMonitor(Star):
                 self.local_check_patterns = self._compile_local_patterns()
 
                 yield event.plain_result(
-                    f"✅ 已删除违禁词：{word}\n剩余违禁词数量：{len(words_config)}"
+                    f"✅ 已删除敏感词：{word}\n剩余敏感词数量：{len(words_config)}"
                 )
             else:
-                yield event.plain_result(f"❌ 违禁词 '{word}' 不存在")
+                yield event.plain_result(f"❌ 敏感词 '{word}' 不存在")
 
         except Exception as e:
-            logger.error(f"删除违禁词失败：{e}")
+            logger.error(f"删除敏感词失败：{e}")
             yield event.plain_result(f"❌ 删除失败：{str(e)}")
 
-    @filter.command("违禁词列表")
+    @filter.command("敏感词列表")
     async def list_forbidden_words(self, event: AiocqhttpMessageEvent):
-        """查看自定义违禁词列表"""
+        """查看自定义敏感词列表"""
         try:
             words = list(self.custom_forbidden_words)
 
             if not words:
-                yield event.plain_result("暂无自定义违禁词")
+                yield event.plain_result("暂无自定义敏感词")
                 return
 
-            message = "📋 自定义违禁词列表\n"
+            message = "📋 自定义敏感词列表\n"
             for i, word in enumerate(sorted(words), 1):
                 message += f"{i}. {word}\n"
 
@@ -1084,22 +1084,22 @@ class SensitiveWordMonitor(Star):
             yield event.plain_result(message)
 
         except Exception as e:
-            logger.error(f"获取违禁词列表失败：{e}")
+            logger.error(f"获取敏感词列表失败：{e}")
             yield event.plain_result("获取列表失败")
 
-    @filter.command("敏感词监控插件状态")
+    @filter.command("敏感词撤回插件状态")
     async def plugin_status(self, event: AiocqhttpMessageEvent):
         """查看插件状态"""
         try:
             status_lines = [
-                "🔧 敏感词监控插件状态",
-                f"版本：v2.0.0",
+                "🔧 敏感词撤回插件状态",
+                f"版本：v0.0.1",
                 f"状态：运行中",
                 "",
                 "⚙️ 核心功能：",
                 f"  监控群聊：{len(self.group_whitelist)} 个",
-                f"  本地违禁词：{len(self.custom_forbidden_words)} 个",
-                f"  本地白名单违禁词：{len(self.custom_white_words)} 个",
+                f"  本地敏感词：{len(self.custom_forbidden_words)} 个",
+                f"  本地白名单敏感词：{len(self.custom_white_words)} 个",
                 f"  绕过限流：{'是' if self.bypass_rate_limit else '否'}",
                 f"  消息撤回：{'启用' if self.enable_message_delete else '禁用'}",
                 f"  自动禁言：{'启用' if self.enable_auto_ban else '禁用'}",
@@ -1118,4 +1118,4 @@ class SensitiveWordMonitor(Star):
 
     async def terminate(self):
         """插件卸载时的清理工作"""
-        logger.info("敏感词监控插件已卸载")
+        logger.info("敏感词撤回插件已卸载")
