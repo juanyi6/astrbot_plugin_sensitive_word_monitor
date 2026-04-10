@@ -1,0 +1,147 @@
+{
+  "group_whitelist": {
+    "description": "监控的白名单群聊UMO列表",
+    "type": "list",
+    "default": ["QQ:GroupMessage:123456"],
+    "hint": "每个群聊的UMO格式为：QQ:GroupMessage:群号"
+  },
+  "admin_qq_list": {
+    "description": "接收敏感词提醒的管理员QQ列表",
+    "type": "list",
+    "default": ["QQ:FriendMessage:123456"],
+    "hint": "管理员UMO列表，格式：QQ:FriendMessage:QQ号"
+  },
+  "api_endpoint_enabled": {
+    "description": "是否在开启API检测功能",
+    "type": "bool",
+    "default": true,
+    "hint": "开启后，会向远端发送API请求检测是否为敏感词"
+  },
+  "api_endpoint": {
+    "description": "敏感词检测API端点",
+    "type": "string",
+    "default": "",
+    "hint": "敏感词检测API地址"
+  },
+  "group_notice_enabled": {
+    "description": "是否在群内发送敏感词提醒",
+    "type": "bool",
+    "default": true,
+    "hint": "开启后，检测到敏感词会在群内发送提醒消息"
+  },
+  "notice_template": {
+    "description": "敏感词提醒模板",
+    "type": "text",
+    "default": "检测到敏感词，消息已撤回并禁言处理。\n检测到的敏感词：{forbidden_words}\n违规次数：第{violation_count}次",
+    "hint": "可用变量：{forbidden_words}, {original_text}, {masked_text}, {violation_count}"
+  },
+  "admin_notice_template": {
+    "description": "管理员私聊提醒模板",
+    "type": "text",
+    "default": "🚨 敏感词警报\n群聊：{group_id}\n用户：{user_name} ({user_id})\n违规次数：第{violation_count}次\n敏感词：{forbidden_words}\n原文：{original_text}\n处理：禁言{ban_duration}秒，消息已撤回\n时间：{timestamp}",
+    "hint": "可用变量：{group_id}, {user_name}, {user_id}, {forbidden_words}, {original_text}, {violation_count}, {ban_duration}, {timestamp}"
+  },
+  "statistics_enabled": {
+    "description": "启用统计功能",
+    "type": "bool",
+    "default": true,
+    "hint": "开启后会统计每个群的敏感词检测数据"
+  },
+  "cooldown_seconds": {
+    "description": "同一用户冷却时间（秒）",
+    "type": "int",
+    "default": 60,
+    "hint": "同一用户连续发言的检测冷却时间"
+  },
+  "enable_auto_ban": {
+    "description": "启用自动禁言",
+    "type": "bool",
+    "default": true,
+    "hint": "开启后，检测到敏感词会自动禁言用户"
+  },
+  "ban_rules": {
+    "description": "禁言规则配置",
+    "type": "object",
+    "hint": "阶梯式禁言规则设置",
+    "items": {
+      "first_ban_duration": {
+        "description": "首次违规禁言时长（秒）",
+        "type": "int",
+        "default": 60,
+        "hint": "第一次触发敏感词的禁言时长"
+      },
+      "second_ban_duration": {
+        "description": "第二次违规禁言时长（秒）",
+        "type": "int",
+        "default": 600,
+        "hint": "同一天内第二次触发敏感词的禁言时长"
+      },
+      "third_ban_duration": {
+        "description": "第三次违规禁言时长（秒）",
+        "type": "int",
+        "default": 86400,
+        "hint": "同一天内第三次触发敏感词的禁言时长（24小时）"
+      },
+      "reset_time": {
+        "description": "违规次数重置时间（小时）",
+        "type": "int",
+        "default": 4,
+        "hint": "每天凌晨几点重置违规次数（24小时制）"
+      }
+    }
+  },
+  "exempt_roles": {
+    "description": "免禁言角色",
+    "type": "list",
+    "default": ["owner", "admin"],
+    "hint": "拥有这些群身份的用户不会触发自动禁言"
+  },
+  "violation_log_enabled": {
+    "description": "启用违规日志记录",
+    "type": "bool",
+    "default": true,
+    "hint": "开启后会记录详细的违规日志"
+  },
+  "max_log_days": {
+    "description": "日志保留天数",
+    "type": "int",
+    "default": 30,
+    "hint": "违规日志保留的最大天数"
+  },
+  "enable_message_delete": {
+    "description": "启用消息撤回",
+    "type": "bool",
+    "default": true,
+    "hint": "检测到敏感词时自动撤回原消息"
+  },
+  "bypass_rate_limit": {
+    "description": "绕过限流策略",
+    "type": "bool",
+    "default": true,
+    "hint": "启用后插件将尝试绕过AstrBot的限流策略"
+  },
+  "custom_forbidden_words": {
+    "description": "自定义违禁词列表",
+    "type": "list",
+    "default": ["测试敏感词1", "测试敏感词2"],
+    "hint": "本地自定义的违禁词，会在API检测之外额外检查"
+  },
+  "custom_white_words": {
+    "description": "自定义白名单词列表",
+    "type": "list",
+    "default": ["测试白名单词1", "测试白名单词2"],
+    "hint": "本地自定义的白名单词，将排除检查"
+  },
+  "enable_local_check": {
+    "description": "启用本地关键词检测",
+    "type": "bool",
+    "default": true,
+    "hint": "在调用API前先进行本地关键词检测"
+  },
+  "debug_mode": {
+    "description": "调试模式",
+    "type": "bool",
+    "default": false,
+    "hint": "开启调试日志输出"
+  }
+}
