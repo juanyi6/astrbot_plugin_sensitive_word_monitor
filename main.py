@@ -40,7 +40,7 @@ class SensitiveWordMonitor(Star):
         self.statistics_enabled = config.get("statistics_enabled", True)
         self.cooldown_seconds = config.get("cooldown_seconds", 60)
         self.enable_auto_ban = config.get("enable_auto_ban", True)
-        self.exempt_roles = config.get("exempt_roles", ["owner", "admin"])
+        self.exempt_users = config.get("exempt_users", [])
         self.violation_log_enabled = config.get("violation_log_enabled", True)
         self.max_log_days = config.get("max_log_days", 30)
         self.enable_message_delete = config.get("enable_message_delete", True)
@@ -90,6 +90,7 @@ class SensitiveWordMonitor(Star):
         logger.info(f"管理员：{len(self.admin_qq_list)}个")
         logger.info(f"自定义敏感词：{len(self.custom_forbidden_words)}个")
         logger.info(f"自定义白名单词：{len(self.custom_white_words)}个")
+        logger.info(f"免处罚用户：{len(self.exempt_users)}个")
         logger.info(
             f"禁言规则：{self.first_ban_duration}s/{self.second_ban_duration}s/{self.third_ban_duration}s"
         )
@@ -234,11 +235,13 @@ class SensitiveWordMonitor(Star):
                 logger.error(f"获取用户角色失败：{e}")
             return None
 
-    def is_exempt_from_ban(self, role: Optional[str]) -> bool:
-        """检查用户是否免禁言"""
-        if not role:
-            return False
-        return role.lower() in [r.lower() for r in self.exempt_roles]
+    def is_exempt_user(self, user_id: str, role: Optional[str] = None) -> bool:
+        """检查用户是否免于处罚（群管理员/群主 或 免处罚用户列表中的QQ号）"""
+        # 群管理员和群主自动免于处罚
+        if role and role.lower() in ("owner", "admin"):
+            return True
+        # 检查是否在免处罚用户列表中
+        return user_id in self.exempt_users
 
     async def get_violation_info(self, group_id: str, user_id: str) -> Tuple[int, str]:
         """获取用户违规信息（次数，最后违规日期）"""
@@ -462,8 +465,16 @@ class SensitiveWordMonitor(Star):
                 logger.error(f"格式化消息失败：{e}")
             return template
 
+    def _extract_qq_from_umo(self, umo: str) -> Optional[str]:
+        """从UMO格式中提取QQ号，如 QQ:FriendMessage:123456 -> 123456"""
+        parts = umo.split(":")
+        if len(parts) >= 3:
+            return parts[-1]
+        return None
+
     async def send_admin_notice(
         self,
+        event: AiocqhttpMessageEvent,
         group_id: str,
         user_id: str,
         user_name: str,
@@ -495,11 +506,17 @@ class SensitiveWordMonitor(Star):
                 if violation_count >= 3:
                     notice_content = f"⚠️⚠️⚠️ 严重违规！第三次违规！\n" + notice_content
 
-                # 发送私聊消息
-                message_chain = MessageChain()
-                message_chain.chain = [Plain(notice_content)]
-
-                await self.context.send_message(admin_umo, message_chain)
+                # 通过 go-cqhttp API 直接发送私聊消息
+                admin_qq = self._extract_qq_from_umo(admin_umo)
+                if admin_qq and hasattr(event, "bot") and hasattr(event.bot, "send_private_msg"):
+                    await event.bot.send_private_msg(
+                        user_id=int(admin_qq), message=notice_content
+                    )
+                else:
+                    # 备用：通过 context 发送
+                    message_chain = MessageChain()
+                    message_chain.chain = [Plain(notice_content)]
+                    await self.context.send_message(admin_umo, message_chain)
 
                 if self.debug_mode:
                     logger.debug(
@@ -564,17 +581,17 @@ class SensitiveWordMonitor(Star):
 
                 # 检测用户身份
                 user_role = await self.get_user_role(event)
-                # 检查用户是否可以被处罚
-                if self.is_exempt_from_ban(user_role):
-                    logger.info(f"检测到敏感词管理员免于处罚")
+                # 检查用户是否免于处罚（群管理员/群主 或 免处罚用户列表）
+                if self.is_exempt_user(user_id, user_role):
+                    logger.info(f"用户{user_id}（角色：{user_role}）免于处罚，跳过撤回和禁言")
                     return
                 
                 await self.delete_message(event)
 
-                # 检查用户是否免禁言
+                # 执行禁言
                 was_banned = False
 
-                if ban_duration > 0 and not self.is_exempt_from_ban(user_role):
+                if ban_duration > 0:
                     ban_success = await self.ban_user(event, user_id, ban_duration)
                     was_banned = ban_success
 
@@ -617,6 +634,7 @@ class SensitiveWordMonitor(Star):
 
                 # 发送管理员通知（每次违规都发送）
                 await self.send_admin_notice(
+                    event,
                     group_id,
                     user_id,
                     user_name,
@@ -659,16 +677,16 @@ class SensitiveWordMonitor(Star):
 
                 # 检测用户身份
                 user_role = await self.get_user_role(event)
-                # 检查用户是否可以被处罚
-                if self.is_exempt_from_ban(user_role):
-                    logger.info(f"检测到敏感词管理员免于处罚")
+                # 检查用户是否免于处罚（群管理员/群主 或 免处罚用户列表）
+                if self.is_exempt_user(user_id, user_role):
+                    logger.info(f"用户{user_id}（角色：{user_role}）免于处罚，跳过撤回和禁言")
                     return
                 
                 await self.delete_message(event)
-                # 检查用户是否免禁言
+                # 执行禁言
                 was_banned = False
 
-                if ban_duration > 0 and not self.is_exempt_from_ban(user_role):
+                if ban_duration > 0:
                     ban_success = await self.ban_user(event, user_id, ban_duration)
                     was_banned = ban_success
 
@@ -713,6 +731,7 @@ class SensitiveWordMonitor(Star):
 
                 # 发送管理员通知（每次违规都发送）
                 await self.send_admin_notice(
+                    event,
                     group_id,
                     user_id,
                     user_name,
@@ -962,10 +981,15 @@ class SensitiveWordMonitor(Star):
                 try:
                     notice_content = f"🧪 测试通知\n群聊：{group_id}\n用户：{user_name} ({user_id})\n模拟违规：第{count}次\n敏感词：{', '.join(forbidden_words)}\n禁言时长：{ban_duration}秒\n时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
-                    message_chain = MessageChain()
-                    message_chain.chain = [Plain(notice_content)]
-
-                    await self.context.send_message(admin_umo, message_chain)
+                    admin_qq = self._extract_qq_from_umo(admin_umo)
+                    if admin_qq and hasattr(event, "bot") and hasattr(event.bot, "send_private_msg"):
+                        await event.bot.send_private_msg(
+                            user_id=int(admin_qq), message=notice_content
+                        )
+                    else:
+                        message_chain = MessageChain()
+                        message_chain.chain = [Plain(notice_content)]
+                        await self.context.send_message(admin_umo, message_chain)
 
                     if self.debug_mode:
                         logger.debug(f"已向管理员 {admin_umo} 发送测试通知")
@@ -1136,6 +1160,7 @@ class SensitiveWordMonitor(Star):
                 f"  绕过限流：{'是' if self.bypass_rate_limit else '否'}",
                 f"  消息撤回：{'启用' if self.enable_message_delete else '禁用'}",
                 f"  自动禁言：{'启用' if self.enable_auto_ban else '禁用'}",
+                f"  免处罚用户：{len(self.exempt_users)} 个",
                 "",
                 "📊 统计信息：",
                 f"  总检测次数：{self.statistics['total_checks']}",

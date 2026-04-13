@@ -1,6 +1,6 @@
 name: astrbot_plugin_sensitive_word_monitor
 display_name: 敏感词撤回插件
 desc: 监测群聊的发言的合规 管理员权限可阶梯式禁言 下载即用 支持白名单控制 支持配置管理员私信提示  支持自定义敏感词 支持API远程检测 支持白名单
-version: v0.1.0
+version: v0.2.0
 author: JuanYi
 repo: https://github.com/juanyi6/astrbot_plugin_sensitive_word_monitor

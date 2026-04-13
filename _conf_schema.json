@@ -90,11 +90,11 @@
       }
     }
   },
-  "exempt_roles": {
-    "description": "免禁言角色",
+  "exempt_users": {
+    "description": "免处罚用户QQ号列表",
     "type": "list",
-    "default": ["owner", "admin"],
-    "hint": "拥有这些群身份的用户不会触发自动禁言"
+    "default": [],
+    "hint": "这些QQ号的用户不会被撤回和禁言（群管理员/群主自动免处罚，无需配置）"
   },
   "violation_log_enabled": {
     "description": "启用违规日志记录",
