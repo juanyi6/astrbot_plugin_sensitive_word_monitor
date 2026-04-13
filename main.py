@@ -550,9 +550,12 @@ class SensitiveWordMonitor(Star):
 
                 # 检测用户身份
                 user_role = await self.get_user_role(event)
-                # 检查用户是否可以撤回消息
+                # 检查用户是否可以被处罚
                 if not self.is_exempt_from_ban(user_role):
-                    await self.delete_message(event)
+                    logger.info(f"API检测到敏感词：{forbidden_words}，但是管理员免于处罚")
+                    return
+                
+                await self.delete_message(event)
 
                 # 检查用户是否免禁言
                 was_banned = False
@@ -640,9 +643,14 @@ class SensitiveWordMonitor(Star):
                     else:
                         ban_duration = self.third_ban_duration
 
-                # 撤回消息
+                # 检测用户身份
+                user_role = await self.get_user_role(event)
+                # 检查用户是否可以被处罚
+                if not self.is_exempt_from_ban(user_role):
+                    logger.info(f"API检测到敏感词：{forbidden_words}，但是管理员免于处罚")
+                    return
+                
                 await self.delete_message(event)
-
                 # 检查用户是否免禁言
                 user_role = await self.get_user_role(event)
                 was_banned = False
