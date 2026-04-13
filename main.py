@@ -201,10 +201,24 @@ class SensitiveWordMonitor(Star):
     async def get_user_role(self, event: AiocqhttpMessageEvent) -> Optional[str]:
         """获取用户在群内的角色"""
         try:
-            if hasattr(event, "is_admin") and callable(event.is_admin):
-                if event.is_admin():
-                    return "admin"
+            # 优先通过 go-cqhttp API 获取群成员信息
+            group_id = event.get_group_id()
+            user_id = str(event.message_obj.sender.user_id)
+            if hasattr(event, "bot") and hasattr(event.bot, "get_group_member_info"):
+                try:
+                    member_info = await event.bot.get_group_member_info(
+                        group_id=int(group_id), user_id=int(user_id)
+                    )
+                    role = member_info.get("role", "")
+                    if role in ("owner", "admin"):
+                        if self.debug_mode:
+                            logger.debug(f"通过API获取到用户{user_id}角色：{role}")
+                        return role
+                except Exception as e:
+                    if self.debug_mode:
+                        logger.debug(f"通过API获取用户角色失败，尝试备用方式：{e}")
 
+            # 备用：从 sender 属性获取
             if hasattr(event.message_obj, "sender"):
                 sender = event.message_obj.sender
                 if hasattr(sender, "role"):
@@ -652,7 +666,6 @@ class SensitiveWordMonitor(Star):
                 
                 await self.delete_message(event)
                 # 检查用户是否免禁言
-                user_role = await self.get_user_role(event)
                 was_banned = False
 
                 if ban_duration > 0 and not self.is_exempt_from_ban(user_role):
