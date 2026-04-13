@@ -712,6 +712,7 @@ class SensitiveWordMonitor(Star):
 
                 logger.error(f"详细堆栈：{traceback.format_exc()}")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @filter.command("敏感词统计")
     async def show_statistics(self, event: AiocqhttpMessageEvent):
         """显示统计信息"""
@@ -760,6 +761,7 @@ class SensitiveWordMonitor(Star):
             logger.error(f"生成统计信息失败：{e}")
             yield event.plain_result("统计信息生成失败")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @filter.command("违规记录")
     async def show_violation_records(
         self, event: AiocqhttpMessageEvent, target_user: str = None
@@ -859,6 +861,7 @@ class SensitiveWordMonitor(Star):
             logger.error(f"查看违规记录失败：{e}")
             yield event.plain_result("查看违规记录失败")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @filter.command("重置违规记录")
     async def reset_violation_record(
         self, event: AiocqhttpMessageEvent, target_user: str = None
@@ -900,6 +903,7 @@ class SensitiveWordMonitor(Star):
             logger.error(f"重置违规记录失败：{e}")
             yield event.plain_result("重置失败")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @filter.command("测试违规")
     async def test_violation(self, event: AiocqhttpMessageEvent, count: int = 1):
         """测试违规功能"""
@@ -950,6 +954,8 @@ class SensitiveWordMonitor(Star):
             logger.error(f"测试违规失败：{e}")
             yield event.plain_result("测试失败")
 
+
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @filter.command("敏感词测试")
     async def test_sensitive(self, event: AiocqhttpMessageEvent, text: str = None):
         """测试敏感词检测"""
@@ -999,6 +1005,7 @@ class SensitiveWordMonitor(Star):
             logger.error(f"敏感词测试失败：{e}")
             yield event.plain_result("测试失败")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @filter.command("添加敏感词")
     async def add_forbidden_word(self, event: AiocqhttpMessageEvent, word: str):
         """添加自定义敏感词"""
@@ -1034,6 +1041,7 @@ class SensitiveWordMonitor(Star):
             logger.error(f"添加敏感词失败：{e}")
             yield event.plain_result(f"❌ 添加失败：{str(e)}")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @filter.command("删除敏感词")
     async def remove_forbidden_word(self, event: AiocqhttpMessageEvent, word: str):
         """删除自定义敏感词"""
@@ -1064,7 +1072,8 @@ class SensitiveWordMonitor(Star):
         except Exception as e:
             logger.error(f"删除敏感词失败：{e}")
             yield event.plain_result(f"❌ 删除失败：{str(e)}")
-
+            
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @filter.command("敏感词列表")
     async def list_forbidden_words(self, event: AiocqhttpMessageEvent):
         """查看自定义敏感词列表"""
