@@ -1,15 +1,15 @@
 {
   "group_whitelist": {
-    "description": "监控的白名单群聊UMO列表",
+    "description": "监控的白名单群号列表",
     "type": "list",
-    "default": ["QQ:GroupMessage:123456"],
-    "hint": "每个群聊的UMO格式为：QQ:GroupMessage:群号"
+    "default": ["123456"],
+    "hint": "填写QQ群号即可，例如：123456"
   },
   "admin_qq_list": {
-    "description": "接收敏感词提醒的管理员QQ列表",
+    "description": "接收敏感词提醒的管理员QQ号列表",
     "type": "list",
-    "default": ["QQ:FriendMessage:123456"],
-    "hint": "管理员UMO列表，格式：QQ:FriendMessage:QQ号"
+    "default": ["123456"],
+    "hint": "填写管理员QQ号即可，例如：123456"
   },
   "api_endpoint_enabled": {
     "description": "是否在开启API检测功能",

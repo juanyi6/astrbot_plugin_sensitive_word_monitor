@@ -29,9 +29,9 @@ class SensitiveWordMonitor(Star):
 
         # 初始化配置
         self.group_whitelist = config.get(
-            "group_whitelist", ["QQ:GroupMessage:1030157691"]
+            "group_whitelist", ["1030157691"]
         )
-        self.admin_qq_list = config.get("admin_qq_list", ["QQ:FriendMessage:962063168"])
+        self.admin_qq_list = config.get("admin_qq_list", ["962063168"])
         self.api_endpoint_enabled = config.get("api_endpoint_enabled", True)
         self.api_endpoint = config.get("api_endpoint", "")
         self.group_notice_enabled = config.get("group_notice_enabled", True)
@@ -183,8 +183,7 @@ class SensitiveWordMonitor(Star):
 
     def is_whitelist_group(self, group_id: str) -> bool:
         """检查群聊是否在白名单中"""
-        group_umo = f"QQ:GroupMessage:{group_id}"
-        return group_umo in self.group_whitelist
+        return str(group_id) in self.group_whitelist
 
     def should_check_user(self, user_id: str) -> bool:
         """检查用户是否在冷却时间内"""
@@ -465,13 +464,6 @@ class SensitiveWordMonitor(Star):
                 logger.error(f"格式化消息失败：{e}")
             return template
 
-    def _extract_qq_from_umo(self, umo: str) -> Optional[str]:
-        """从UMO格式中提取QQ号，如 QQ:FriendMessage:123456 -> 123456"""
-        parts = umo.split(":")
-        if len(parts) >= 3:
-            return parts[-1]
-        return None
-
     async def send_admin_notice(
         self,
         event: AiocqhttpMessageEvent,
@@ -487,7 +479,7 @@ class SensitiveWordMonitor(Star):
         if not self.admin_qq_list:
             return
 
-        for admin_umo in self.admin_qq_list:
+        for admin_qq in self.admin_qq_list:
             try:
                 notice_content = self.format_notice(
                     self.admin_notice_template,
@@ -507,23 +499,23 @@ class SensitiveWordMonitor(Star):
                     notice_content = f"⚠️⚠️⚠️ 严重违规！第三次违规！\n" + notice_content
 
                 # 通过 go-cqhttp API 直接发送私聊消息
-                admin_qq = self._extract_qq_from_umo(admin_umo)
-                if admin_qq and hasattr(event, "bot") and hasattr(event.bot, "send_private_msg"):
+                if hasattr(event, "bot") and hasattr(event.bot, "send_private_msg"):
                     await event.bot.send_private_msg(
                         user_id=int(admin_qq), message=notice_content
                     )
                 else:
-                    # 备用：通过 context 发送
+                    # 备用：通过 context 发送（需要构造UMO格式）
+                    admin_umo = f"QQ:FriendMessage:{admin_qq}"
                     message_chain = MessageChain()
                     message_chain.chain = [Plain(notice_content)]
                     await self.context.send_message(admin_umo, message_chain)
 
                 if self.debug_mode:
                     logger.debug(
-                        f"已向管理员 {admin_umo} 发送敏感词提醒（第{violation_count}次违规）"
+                        f"已向管理员 {admin_qq} 发送敏感词提醒（第{violation_count}次违规）"
                     )
             except Exception as e:
-                logger.error(f"向管理员 {admin_umo} 发送提醒失败：{e}")
+                logger.error(f"向管理员 {admin_qq} 发送提醒失败：{e}")
 
     @filter.platform_adapter_type(filter.PlatformAdapterType.AIOCQHTTP)
     @filter.event_message_type(EventMessageType.GROUP_MESSAGE)
@@ -767,9 +759,7 @@ class SensitiveWordMonitor(Star):
             group_id = event.get_group_id()
             user_id = str(event.message_obj.sender.user_id)
 
-            if not self.is_whitelist_group(group_id) and not any(
-                admin_umo.endswith(user_id) for admin_umo in self.admin_qq_list
-            ):
+            if not self.is_whitelist_group(group_id) and user_id not in self.admin_qq_list:
                 yield event.plain_result("权限不足")
                 return
 
@@ -814,9 +804,7 @@ class SensitiveWordMonitor(Star):
             group_id = event.get_group_id()
             user_id = str(event.message_obj.sender.user_id)
 
-            if not self.is_whitelist_group(group_id) and not any(
-                admin_umo.endswith(user_id) for admin_umo in self.admin_qq_list
-            ):
+            if not self.is_whitelist_group(group_id) and user_id not in self.admin_qq_list:
                 yield event.plain_result("权限不足")
                 return
 
@@ -913,7 +901,7 @@ class SensitiveWordMonitor(Star):
         try:
             user_id = str(event.message_obj.sender.user_id)
 
-            if not any(admin_umo.endswith(user_id) for admin_umo in self.admin_qq_list):
+            if user_id not in self.admin_qq_list:
                 yield event.plain_result("仅管理员可重置违规记录")
                 return
 
@@ -953,7 +941,7 @@ class SensitiveWordMonitor(Star):
         try:
             user_id = str(event.message_obj.sender.user_id)
 
-            if not any(admin_umo.endswith(user_id) for admin_umo in self.admin_qq_list):
+            if user_id not in self.admin_qq_list:
                 yield event.plain_result("仅管理员可测试违规")
                 return
 
@@ -977,22 +965,22 @@ class SensitiveWordMonitor(Star):
                 ban_duration = self.third_ban_duration
 
             # 发送测试通知给所有管理员
-            for admin_umo in self.admin_qq_list:
+            for admin_qq in self.admin_qq_list:
                 try:
                     notice_content = f"🧪 测试通知\n群聊：{group_id}\n用户：{user_name} ({user_id})\n模拟违规：第{count}次\n敏感词：{', '.join(forbidden_words)}\n禁言时长：{ban_duration}秒\n时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
-                    admin_qq = self._extract_qq_from_umo(admin_umo)
-                    if admin_qq and hasattr(event, "bot") and hasattr(event.bot, "send_private_msg"):
+                    if hasattr(event, "bot") and hasattr(event.bot, "send_private_msg"):
                         await event.bot.send_private_msg(
                             user_id=int(admin_qq), message=notice_content
                         )
                     else:
+                        admin_umo = f"QQ:FriendMessage:{admin_qq}"
                         message_chain = MessageChain()
                         message_chain.chain = [Plain(notice_content)]
                         await self.context.send_message(admin_umo, message_chain)
 
                     if self.debug_mode:
-                        logger.debug(f"已向管理员 {admin_umo} 发送测试通知")
+                        logger.debug(f"已向管理员 {admin_qq} 发送测试通知")
                 except Exception as e:
                     logger.error(f"发送测试通知失败：{e}")
 
@@ -1060,7 +1048,7 @@ class SensitiveWordMonitor(Star):
         try:
             user_id = str(event.message_obj.sender.user_id)
 
-            if not any(admin_umo.endswith(user_id) for admin_umo in self.admin_qq_list):
+            if user_id not in self.admin_qq_list:
                 yield event.plain_result("仅管理员可添加敏感词")
                 return
 
@@ -1096,7 +1084,7 @@ class SensitiveWordMonitor(Star):
         try:
             user_id = str(event.message_obj.sender.user_id)
 
-            if not any(admin_umo.endswith(user_id) for admin_umo in self.admin_qq_list):
+            if user_id not in self.admin_qq_list:
                 yield event.plain_result("仅管理员可删除敏感词")
                 return
 

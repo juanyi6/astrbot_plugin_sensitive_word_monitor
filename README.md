@@ -15,8 +15,8 @@
 # 配置项
 | 配置项 | 说明 |
 |--------|------|
-| group_whitelist | 监控的白名单群聊（UMO格式） |
-| admin_qq_list | 接收提醒的管理员QQ列表（UMO格式） |
+| group_whitelist | 监控的白名单群号列表（直接填写QQ群号） |
+| admin_qq_list | 接收提醒的管理员QQ号列表（直接填写QQ号） |
 | api_endpoint_enabled | 是否开启API检测功能 |
 | api_endpoint | 敏感词检测API地址 |
 | group_notice_enabled | 是否在群内发送敏感词提醒 |
