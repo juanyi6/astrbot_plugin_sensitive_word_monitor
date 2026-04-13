@@ -522,6 +522,7 @@ class SensitiveWordMonitor(Star):
                     logger.debug(f"用户{user_id}在冷却时间内，忽略")
                 return
 
+
             # 本地敏感词检测
             local_hit, local_words = self.local_check(message_text)
             if local_hit and local_words:
@@ -547,11 +548,13 @@ class SensitiveWordMonitor(Star):
                     else:
                         ban_duration = self.third_ban_duration
 
-                # 撤回消息
-                await self.delete_message(event)
+                # 检测用户身份
+                user_role = await self.get_user_role(event)
+                # 检查用户是否可以撤回消息
+                if not self.is_exempt_from_ban(user_role):
+                    await self.delete_message(event)
 
                 # 检查用户是否免禁言
-                user_role = await self.get_user_role(event)
                 was_banned = False
 
                 if ban_duration > 0 and not self.is_exempt_from_ban(user_role):
