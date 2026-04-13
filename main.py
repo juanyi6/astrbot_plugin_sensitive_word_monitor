@@ -552,7 +552,7 @@ class SensitiveWordMonitor(Star):
                 user_role = await self.get_user_role(event)
                 # 检查用户是否可以被处罚
                 if self.is_exempt_from_ban(user_role):
-                    logger.info(f"API检测到敏感词：{forbidden_words}，但是管理员免于处罚")
+                    logger.info(f"检测到敏感词管理员免于处罚")
                     return
                 
                 await self.delete_message(event)
@@ -647,7 +647,7 @@ class SensitiveWordMonitor(Star):
                 user_role = await self.get_user_role(event)
                 # 检查用户是否可以被处罚
                 if self.is_exempt_from_ban(user_role):
-                    logger.info(f"API检测到敏感词：{forbidden_words}，但是管理员免于处罚")
+                    logger.info(f"检测到敏感词管理员免于处罚")
                     return
                 
                 await self.delete_message(event)
